@@ -1,0 +1,34 @@
+name: ASERKAR Background Collector
+
+on:
+  schedule:
+    - cron: '0 */12 * * *' # Automatically runs every 12 hours
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  run-scraper-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Grants permission to commit back to the repo
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Collector Script
+        run: python collector.py
+
+      - name: Commit and Push Updated Data
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "action@github.com"
+          git add data/intelligence.json
+          git commit -m "Auto-update background intelligence feed" || exit 0
+          git push
