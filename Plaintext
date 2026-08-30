@@ -1,5 +1,11 @@
-streamlit
-crewai[google-genai]
-feedparser
-beautifulsoup4
-requests
+aserkar-framework/
+├── .github/
+│   └── workflows/
+│       └── data_collector.yml    <-- Runs scraper & commits data to GitHub
+├── data/
+│   └── intelligence.json         <-- Your "database" file auto-updated by GitHub
+├── scenarios/                    <-- Saved wargame report files
+├── collector.py                  <-- Scrapes news into JSON
+├── wargame_engine.py             <-- Reads JSON & runs CrewAI
+├── app.py                        <-- Streamlit Dashboard UI
+└── requirements.txt              <-- Dependencies
