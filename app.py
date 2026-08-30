@@ -37,7 +37,8 @@ st.markdown(header_html, unsafe_allow_html=True)
 
 # Original Dashboard Section Header
 st.title("🌐 Supply Chain Intelligence Hub")
-st.markdown("Autonomous multi-source ingestion, AI executive briefings, and logistics risk monitoring.")
+st.markdown("Autonomous multi-source ingestion, AI executive briefings, and logistics risk monitoring.
+Named after Prof. Rajiv Aserkar")
 st.divider()
 
 json_path = "data/intelligence.json"
