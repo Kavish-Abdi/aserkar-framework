@@ -1,3 +1,5 @@
 streamlit
-crewai[google-genai,openai]
+crewai[google-genai]
 feedparser
+beautifulsoup4
+requests
