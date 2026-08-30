@@ -1,39 +1,49 @@
-import os
 import streamlit as st
-from wargame_engine import run_aserkar_simulation, fetch_local_intelligence
+import json
+import os
 
-st.set_page_config(page_title="The A.S.E.R.K.A.R. Framework", layout="wide")
+st.set_page_config(page_title="The A.S.E.R.K.A.R. Framework", layout="wide", page_icon="🌐")
 
-st.title("🛡️ The A.S.E.R.K.A.R. Framework")
-st.caption("Anticipatory Supply-chain Engine for Risk, Knowledge, and Automated Resilience")
+st.title("🌐 Supply Chain Intelligence Hub")
+st.markdown("Live multi-source data extraction and AI-summarized threat intelligence.")
+st.divider()
 
-st.sidebar.header("Command Center")
-if st.sidebar.button("Generate Wargame Scenario"):
-    with st.spinner("Analyzing intelligence feed and running multi-agent simulation..."):
+json_path = "data/intelligence.json"
+
+if os.path.exists(json_path):
+    with open(json_path, "r") as f:
         try:
-            scenario = run_aserkar_simulation()
-            st.success("Simulation Complete!")
-            st.markdown(scenario)
-        except Exception as e:
-            st.error(f"Error during simulation: {e}")
-
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    st.header("📡 Live Background Intelligence Feed")
-    st.info("This data is collected automatically every 12 hours by GitHub Actions.")
-    intel = fetch_local_intelligence()
-    st.text_area("Latest Data Payload", intel, height=300)
-
-with col2:
-    st.header("📋 Scenario Archive")
-    if os.path.exists("scenarios"):
-        files = [f for f in os.listdir("scenarios") if f.endswith(".md")]
-        files.sort(reverse=True)
-        if files:
-            selected_file = st.selectbox("Review past stress-tests:", files)
-            if selected_file:
-                with open(os.path.join("scenarios", selected_file), "r") as f:
-                    st.markdown(f.read())
-        else:
-            st.info("No scenarios generated yet. Click the sidebar button to generate one.")
+            articles = json.load(f)
+        except json.JSONDecodeError:
+            articles = []
+            
+    if not articles:
+        st.info("The intelligence database is currently empty. Waiting for the next background collection cycle.")
+    else:
+        # Create a dynamic 3-column grid for the magazine layout
+        cols = st.columns(3)
+        
+        for index, article in enumerate(articles):
+            # Distribute articles evenly across the 3 columns
+            col = cols[index % 3]
+            
+            with col.container(border=True):
+                # Display the extracted thumbnail image
+                thumbnail = article.get("thumbnail", "https://images.unsplash.com/photo-1586528116311-ad8ed7c663c0?w=800&q=80")
+                try:
+                    st.image(thumbnail, use_container_width=True)
+                except Exception:
+                    st.image("https://images.unsplash.com/photo-1586528116311-ad8ed7c663c0?w=800&q=80", use_container_width=True)
+                
+                # Display metadata and title
+                st.caption(f"**{article.get('source', 'Industry Source')}** • {article.get('date_collected', 'Recent')}")
+                st.subheader(article.get("title", "Untitled Intelligence Report"))
+                
+                # Display Gemini's executive summary
+                st.write(article.get("summary", "No summary available."))
+                
+                # Provide direct canonical link
+                link = article.get("link", "#")
+                st.markdown(f"[**Read Original Article ↗**]({link})")
+else:
+    st.warning("Intelligence database not found. Ensure the GitHub Actions collector has successfully run.")
