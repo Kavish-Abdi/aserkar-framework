@@ -1,18 +1,17 @@
-name: ASERKAR Background Collector
+name: ASERKAR Multi-Source Collector
 
 on:
   schedule:
-    - cron: '0 */12 * * *' # Automatically runs every 12 hours
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+    - cron: '0 6 * * *'
+  workflow_dispatch: 
 
 jobs:
   run-scraper-and-commit:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grants permission to commit back to the repo
+      contents: write 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -22,13 +21,15 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Collector Script
+      - name: Run Extraction Engine
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python collector.py
 
-      - name: Commit and Push Updated Data
+      - name: Commit Backup Data
         run: |
-          git config --global user.name "GitHub Action Bot"
-          git config --global user.email "action@github.com"
+          git config --global user.name "ASERKAR Bot"
+          git config --global user.email "bot@aserkar.com"
           git add data/intelligence.json
-          git commit -m "Auto-update background intelligence feed" || exit 0
+          git commit -m "Daily Intelligence Extraction Backup" || exit 0
           git push
