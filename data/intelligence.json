@@ -1,6 +1,6 @@
 [
     {
-        "date_collected": "2026-09-01 21:51",
-        "master_report": "Error generating synthesis: Authentication required. Provide one of:\n  1. API key via GOOGLE_API_KEY or GEMINI_API_KEY environment variable\n     (use_vertexai=True is optional for Vertex AI with API key)\n  2. For Vertex AI with ADC: Set GOOGLE_CLOUD_PROJECT and run:\n     gcloud auth application-default login\n  3. Pass api_key parameter directly to LLM constructor\n"
+        "date_collected": "2026-09-01 22:01",
+        "master_report": "Error generating synthesis: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ModelService.ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
     }
 ]
