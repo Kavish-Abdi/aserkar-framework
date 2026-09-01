@@ -12,14 +12,14 @@ gemini_model = LLM(
     api_key=os.environ.get("GEMINI_API_KEY")
 )
 
-# The Professor's Disruption Matrix
-RISK_CATEGORIES = {
-    "Geopolitics & Trade": ["tariff", "export control", "quota", "sanction", "embargo", "trade restriction", "customs delay", "protectionism", "war", "military", "blockade", "piracy", "red sea", "terrorism", "border closure", "protest", "riot", "coup", "shutdown", "civil unrest"],
-    "Natural Disasters": ["typhoon", "hurricane", "cyclone", "blizzard", "heatwave", "freeze", "earthquake", "tsunami", "volcanic", "flood", "landslide", "drought", "canal draft", "wildfire", "water scarcity"],
-    "Logistics & Infrastructure": ["port congestion", "route closure", "canal blockage", "airspace restriction", "derailment", "trucking shortage", "cyberattack", "ransomware", "outage", "blackout", "container shortage", "vessel delay", "blank sailing", "warehousing capacity"],
-    "Labor & Economics": ["strike", "union", "worker shortage", "walkout", "lockout", "bankruptcy", "hyperinflation", "devaluation", "price spike", "liquidity crisis"],
-    "Public Health & Safety": ["pandemic", "epidemic", "outbreak", "quarantine", "lockdown", "factory fire", "chemical spill", "hazardous", "recall"]
-}
+# The Professor's Complete Disruption Matrix
+RISK_MATRIX = """
+1. Geopolitics & Trade Policy: Tariffs, export controls, quotas, sanctions, embargoes, trade restrictions, customs delays, protectionism. Conflict & Security: War, military operations, blockades, piracy (e.g., Red Sea), terrorism, border closures. Political Instability: Protests, riots, coups, government shutdowns, civil unrest.
+2. Natural Disasters & Climate: Extreme Weather (Typhoons, hurricanes, cyclones, blizzards, heatwaves, deep freezes), Geological (Earthquakes, tsunamis, volcanic eruptions, floods, landslides), Environmental Shifts (Droughts, wildfires, water scarcity).
+3. Logistics & Infrastructure: Transportation Bottlenecks (Port congestion, route closures, canal blockages, airspace restrictions, rail derailments, trucking shortages), System Failures (Cyberattacks, ransomware, IT outages, power grid blackouts), Capacity Constraints (Container shortages, vessel delays, blank sailings, warehousing limits).
+4. Labor & Economic Factors: Workforce Disruptions (Labor strikes, union disputes, worker shortages, walkouts, lockouts), Financial Instability (Supplier bankruptcies, hyperinflation, currency devaluation, raw material price spikes, liquidity crises).
+5. Public Health & Safety: Health Crises (Pandemics, epidemics, disease outbreaks, quarantines, lockdowns), Industrial Accidents (Factory fires, chemical spills, hazardous leaks, component recalls).
+"""
 
 def extract_thumbnail(url):
     try:
@@ -33,30 +33,40 @@ def extract_thumbnail(url):
         pass
     return "https://images.unsplash.com/photo-1586528116311-ad8ed7c663c0?w=800&q=80"
 
-def check_risk_triggers(text):
-    text_lower = text.lower()
-    triggered_categories = []
-    for category, keywords in RISK_CATEGORIES.items():
-        if any(keyword in text_lower for keyword in keywords):
-            triggered_categories.append(category)
-    return triggered_categories
-
-def summarize_article(text, categories):
+def analyze_article(text):
     clean_text = BeautifulSoup(text, "html.parser").get_text(separator=" ")
-    cats_str = ", ".join(categories)
+    
+    prompt = f"""
+    You are an elite logistics intelligence AI. Analyze this article against the following risk matrix:
+    {RISK_MATRIX}
+    
+    Task:
+    1. Write a 4-5 sentence executive briefing summarizing the disruption.
+    2. Explicitly evaluate the potential cascading impacts on dependent manufacturing sectors, specifically automotive and electronics.
+    3. At the very end of your response, add a new line starting exactly with "TAGS:" followed by a comma-separated list of the primary risk categories triggered (e.g., Geopolitics & Trade Policy, Logistics & Infrastructure). If no specific risks apply, output "TAGS: General Intelligence".
+    
+    Article Text: {clean_text[:3500]}
+    """
     
     try:
-        prompt = (
-            f"You are a global logistics analyst. Write a highly analytical briefing (4-5 sentences) "
-            f"explaining the supply chain disruption in this text. "
-            f"This event triggered our {cats_str} risk monitors. "
-            f"Crucially, explicitly evaluate the potential cascading impacts on dependent manufacturing sectors, specifically automotive and electronics. "
-            f"Text: {clean_text[:3000]}"
-        )
         response = gemini_model.call([{"role": "user", "content": prompt}])
-        return response
+        
+        # Parse the AI response to separate the summary from the risk tags
+        lines = response.strip().split('\n')
+        tags = ["General Intelligence"]
+        summary_lines = []
+        
+        for line in lines:
+            if line.strip().startswith("TAGS:"):
+                tag_str = line.replace("TAGS:", "").strip()
+                tags = [t.strip() for t in tag_str.split(",") if t.strip()]
+            else:
+                summary_lines.append(line)
+                
+        return "\n".join(summary_lines).strip(), tags
+        
     except Exception:
-        return clean_text[:350] + "..."
+        return clean_text[:350] + "...", ["General Intelligence"]
 
 def gather_and_store():
     rss_urls = [
@@ -70,33 +80,29 @@ def gather_and_store():
     
     for rss in rss_urls:
         feed = feedparser.parse(rss)
-        for entry in feed.entries:
+        # Process every article to cast a wide net
+        for entry in feed.entries[:10]: 
             raw_text = entry.title + " " + entry.get("summary", "")
             
-            # 1. Gatekeeper: Only process if it matches the professor's matrix
-            triggered_risks = check_risk_triggers(raw_text)
+            print(f"Analyzing: {entry.title[:50]}...")
+            link = entry.link
+            thumbnail = extract_thumbnail(link)
             
-            if triggered_risks:
-                print(f"Risk Detected ({triggered_risks[0]}): {entry.title[:30]}...")
-                link = entry.link
-                thumbnail = extract_thumbnail(link)
-                
-                # 2. AI Sector Impact Analysis
-                summary = summarize_article(raw_text, triggered_risks)
-                
-                collected_articles.append({
-                    "title": entry.title,
-                    "link": link,
-                    "thumbnail": thumbnail,
-                    "summary": summary,
-                    "risk_tags": triggered_risks,
-                    "source": feed.feed.title if hasattr(feed.feed, 'title') else "Industry Intelligence",
-                    "date_collected": datetime.now().strftime("%Y-%m-%d %H:%M")
-                })
-                
-                time.sleep(4) 
-            else:
-                print(f"Skipped (No Risk Triggers): {entry.title[:30]}...")
+            # The AI now acts as the filter and tagger
+            summary, risk_tags = analyze_article(raw_text)
+            
+            collected_articles.append({
+                "title": entry.title,
+                "link": link,
+                "thumbnail": thumbnail,
+                "summary": summary,
+                "risk_tags": risk_tags,
+                "source": feed.feed.title if hasattr(feed.feed, 'title') else "Industry Intelligence",
+                "date_collected": datetime.now().strftime("%Y-%m-%d %H:%M")
+            })
+            
+            # 5-second sleep to prevent hitting Gemini API free-tier rate limits
+            time.sleep(5) 
             
     os.makedirs("data", exist_ok=True)
     json_path = "data/intelligence.json"
@@ -105,14 +111,22 @@ def gather_and_store():
         try:
             with open(json_path, "r") as f:
                 existing_data = json.load(f)
-            collected_articles = collected_articles + existing_data
+            
+            # Prevent duplicate articles based on the URL
+            existing_urls = {item['link'] for item in existing_data}
+            new_articles = [item for item in collected_articles if item['link'] not in existing_urls]
+            
+            collected_articles = new_articles + existing_data
         except json.JSONDecodeError:
             pass
+            
+    # Keep the latest 100 articles to prevent the dashboard from slowing down
+    collected_articles = collected_articles[:100]
             
     with open(json_path, "w") as f:
         json.dump(collected_articles, f, indent=4)
         
-    print("Targeted risk intelligence gathered and saved.")
+    print("Intelligence gathered and saved.")
 
 if __name__ == "__main__":
     gather_and_store()
