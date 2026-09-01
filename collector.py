@@ -4,9 +4,9 @@ import feedparser
 from datetime import datetime
 from crewai import LLM
 
-# Configured with the stable production Gemini model endpoint
+# Configured with the current active Google production endpoint
 gemini_model = LLM(
-    model="gemini/gemini-2.5-flash",
+    model="gemini/gemini-3.6-flash",
     api_key=os.environ.get("GEMINI_API_KEY")
 )
 
