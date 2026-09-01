@@ -12,42 +12,50 @@ gemini_model = LLM(
     api_key=os.environ.get("GEMINI_API_KEY")
 )
 
+# The Professor's Disruption Matrix
+RISK_CATEGORIES = {
+    "Geopolitics & Trade": ["tariff", "export control", "quota", "sanction", "embargo", "trade restriction", "customs delay", "protectionism", "war", "military", "blockade", "piracy", "red sea", "terrorism", "border closure", "protest", "riot", "coup", "shutdown", "civil unrest"],
+    "Natural Disasters": ["typhoon", "hurricane", "cyclone", "blizzard", "heatwave", "freeze", "earthquake", "tsunami", "volcanic", "flood", "landslide", "drought", "canal draft", "wildfire", "water scarcity"],
+    "Logistics & Infrastructure": ["port congestion", "route closure", "canal blockage", "airspace restriction", "derailment", "trucking shortage", "cyberattack", "ransomware", "outage", "blackout", "container shortage", "vessel delay", "blank sailing", "warehousing capacity"],
+    "Labor & Economics": ["strike", "union", "worker shortage", "walkout", "lockout", "bankruptcy", "hyperinflation", "devaluation", "price spike", "liquidity crisis"],
+    "Public Health & Safety": ["pandemic", "epidemic", "outbreak", "quarantine", "lockdown", "factory fire", "chemical spill", "hazardous", "recall"]
+}
+
 def extract_thumbnail(url):
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(response.text, 'html.parser')
-        
         og_image = soup.find("meta", property="og:image")
         if og_image and og_image.get("content", "").startswith("http"):
             return og_image["content"]
-            
-        twitter_image = soup.find("meta", attrs={"name": "twitter:image"})
-        if twitter_image and twitter_image.get("content", "").startswith("http"):
-            return twitter_image["content"]
-            
-        for img in soup.find_all('img'):
-            src = img.get('src')
-            if src and src.startswith("http") and 'logo' not in src.lower() and 'icon' not in src.lower():
-                return src
     except Exception:
         pass
     return "https://images.unsplash.com/photo-1586528116311-ad8ed7c663c0?w=800&q=80"
 
-def summarize_article(text):
-    # Strip away all raw HTML tags before sending to Gemini
+def check_risk_triggers(text):
+    text_lower = text.lower()
+    triggered_categories = []
+    for category, keywords in RISK_CATEGORIES.items():
+        if any(keyword in text_lower for keyword in keywords):
+            triggered_categories.append(category)
+    return triggered_categories
+
+def summarize_article(text, categories):
     clean_text = BeautifulSoup(text, "html.parser").get_text(separator=" ")
+    cats_str = ", ".join(categories)
     
     try:
         prompt = (
-            "Write a detailed, analytical briefing paragraph (4 to 5 sentences) "
-            "explaining the key events, operational impacts, and supply chain risks "
-            f"described in this news item: {clean_text[:3000]}"
+            f"You are a global logistics analyst. Write a highly analytical briefing (4-5 sentences) "
+            f"explaining the supply chain disruption in this text. "
+            f"This event triggered our {cats_str} risk monitors. "
+            f"Crucially, explicitly evaluate the potential cascading impacts on dependent manufacturing sectors, specifically automotive and electronics. "
+            f"Text: {clean_text[:3000]}"
         )
         response = gemini_model.call([{"role": "user", "content": prompt}])
         return response
     except Exception:
-        # If Gemini fails, return the clean text, not raw HTML
         return clean_text[:350] + "..."
 
 def gather_and_store():
@@ -62,26 +70,33 @@ def gather_and_store():
     
     for rss in rss_urls:
         feed = feedparser.parse(rss)
-        # Removed the [:2] limit to get ALL articles
         for entry in feed.entries:
-            link = entry.link
-            thumbnail = extract_thumbnail(link)
+            raw_text = entry.title + " " + entry.get("summary", "")
             
-            raw_summary = entry.get("summary", entry.get("title", ""))
-            summary = summarize_article(raw_summary)
+            # 1. Gatekeeper: Only process if it matches the professor's matrix
+            triggered_risks = check_risk_triggers(raw_text)
             
-            collected_articles.append({
-                "title": entry.title,
-                "link": link,
-                "thumbnail": thumbnail,
-                "summary": summary,
-                "source": feed.feed.title if hasattr(feed.feed, 'title') else "Industry Intelligence",
-                "date_collected": datetime.now().strftime("%Y-%m-%d %H:%M")
-            })
-            
-            # Pause for 4 seconds to prevent getting banned by the Gemini Free Tier
-            print(f"Processed: {entry.title[:30]}...")
-            time.sleep(4) 
+            if triggered_risks:
+                print(f"Risk Detected ({triggered_risks[0]}): {entry.title[:30]}...")
+                link = entry.link
+                thumbnail = extract_thumbnail(link)
+                
+                # 2. AI Sector Impact Analysis
+                summary = summarize_article(raw_text, triggered_risks)
+                
+                collected_articles.append({
+                    "title": entry.title,
+                    "link": link,
+                    "thumbnail": thumbnail,
+                    "summary": summary,
+                    "risk_tags": triggered_risks,
+                    "source": feed.feed.title if hasattr(feed.feed, 'title') else "Industry Intelligence",
+                    "date_collected": datetime.now().strftime("%Y-%m-%d %H:%M")
+                })
+                
+                time.sleep(4) 
+            else:
+                print(f"Skipped (No Risk Triggers): {entry.title[:30]}...")
             
     os.makedirs("data", exist_ok=True)
     json_path = "data/intelligence.json"
@@ -90,7 +105,6 @@ def gather_and_store():
         try:
             with open(json_path, "r") as f:
                 existing_data = json.load(f)
-            # Add new articles to the top of the database
             collected_articles = collected_articles + existing_data
         except json.JSONDecodeError:
             pass
@@ -98,7 +112,7 @@ def gather_and_store():
     with open(json_path, "w") as f:
         json.dump(collected_articles, f, indent=4)
         
-    print("Full multi-source intelligence gathered, summarized, and saved.")
+    print("Targeted risk intelligence gathered and saved.")
 
 if __name__ == "__main__":
     gather_and_store()
