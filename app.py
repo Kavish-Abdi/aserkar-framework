@@ -12,10 +12,10 @@ st.set_page_config(
 header_col1, header_col2, header_col3 = st.columns([1.5, 1, 1.5])
 
 with header_col2:
-    if os.path.exists("logo.png"):
-        st.image("logo.png", use_container_width=True)
+    if os.path.exists("logo1.png"):
+        st.image("logo1.png", use_container_width=True)
     else:
-        st.warning("logo.png not found. Please upload it to the repository.")
+        st.warning("logo1.png not found. Please upload it to the repository.")
 
 st.markdown(
     """
