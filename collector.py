@@ -1,14 +1,32 @@
 import os
 import json
+import time
 import feedparser
 from datetime import datetime
 from crewai import LLM
 
-# Configured with the current active Google production endpoint
+# Configured with the active Google production endpoint
 gemini_model = LLM(
     model="gemini/gemini-3.6-flash",
     api_key=os.environ.get("GEMINI_API_KEY")
 )
+
+def synthesize_with_retry(prompt, max_retries=3, initial_delay=5):
+    """Attempt to call the Gemini model with exponential backoff to handle 503 Overloads."""
+    delay = initial_delay
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = gemini_model.call([{"role": "user", "content": prompt}])
+            if response and "Error generating synthesis" not in str(response):
+                return response
+            raise Exception(str(response))
+        except Exception as e:
+            print(f"Attempt {attempt} failed with error: {str(e)}")
+            if attempt == max_retries:
+                return f"Error generating synthesis after {max_retries} retries: {str(e)}"
+            print(f"Retrying in {delay} seconds...")
+            time.sleep(delay)
+            delay *= 2  # Exponential backoff
 
 def synthesize_weekly_report(raw_batch_text):
     prompt = f"""
@@ -29,11 +47,7 @@ def synthesize_weekly_report(raw_batch_text):
     {raw_batch_text[:35000]}
     """
     
-    try:
-        response = gemini_model.call([{"role": "user", "content": prompt}])
-        return response
-    except Exception as e:
-        return f"Error generating synthesis: {str(e)}"
+    return synthesize_with_retry(prompt)
 
 def gather_and_synthesize():
     rss_urls = [
@@ -51,13 +65,13 @@ def gather_and_synthesize():
         for entry in feed.entries[:15]: 
             master_text_batch += f"Title: {entry.title}\nSummary: {entry.get('summary', '')}\n\n"
             
-    print("Transmitting to Gemini for Master Synthesis...")
+    print("Transmitting to Gemini for Master Synthesis with Auto-Retry...")
     weekly_report_md = synthesize_weekly_report(master_text_batch)
     
     os.makedirs("data", exist_ok=True)
     json_path = "data/intelligence.json"
     
-    # Reset old entries and save the structured master weekly report
+    # Save the structured master weekly report
     report_data = [{
         "date_collected": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "master_report": weekly_report_md
