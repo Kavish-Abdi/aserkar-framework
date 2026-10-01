@@ -14,7 +14,18 @@ def generate_wargame_scenario(scenario_text):
     
     You must not wait for sequential prompts. Upon receiving the news text, automatically process the data and output the final response strictly as a single Markdown table.
     
-    CRITICAL CITATION RULE: To maintain absolute academic authenticity, EVERY SINGLE bullet point, factual statement, or analytical claim within the table MUST end with an explicit source citation in parentheses at the very end of the line, detailing the publication and date (e.g., (The Wall Street Journal, October 2026)). Do not leave any line uncited.
+    CRITICAL CITATION RULE:
+    To maintain absolute academic authenticity, EVERY SINGLE bullet point, factual statement, or analytical claim within the table MUST end with an explicit source citation in parentheses at the very end of the line.
+    The citation MUST strictly include:
+    1. The publication/source name
+    2. The exact article title in quotation marks
+    3. The publication date
+    
+    Required Citation Format:
+    ([Publication Name], "[Exact Article Title]", [Month Year])
+    Example: (The Loadstar, "Red Sea Diversions Squeeze Global Container Capacity", September 2026)
+    
+    Do not leave any line uncited.
     
     Format the table exactly with the following four columns, focusing strictly on an industry-wide perspective (do not analyze country-wise):
     
