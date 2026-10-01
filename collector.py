@@ -37,18 +37,19 @@ def is_relevant_article(entry):
     content_block = f"{entry.title} {entry.get('summary', '')}".lower()
     return any(keyword in content_block for keyword in target_keywords)
 
-def synthesize_with_retry(prompt, max_retries=3, initial_delay=5):
+def synthesize_with_retry(prompt, max_retries=5, initial_delay=10):
     delay = initial_delay
     for attempt in range(1, max_retries + 1):
         try:
             response = gemini_model.call([{"role": "user", "content": prompt}])
-            if response and "Error generating synthesis" not in str(response):
+            if response and "Error generating synthesis" not in str(response) and "503" not in str(response):
                 return response
             raise Exception(str(response))
         except Exception as e:
             print(f"Attempt {attempt} failed with error: {str(e)}")
             if attempt == max_retries:
-                return f"Error generating synthesis after {max_retries} retries: {str(e)}"
+                # Returns a strict ERROR flag instead of a string if it totally fails
+                return "CRITICAL_FAILURE"
             print(f"Retrying in {delay} seconds...")
             time.sleep(delay)
             delay *= 2
@@ -96,7 +97,6 @@ def gather_and_synthesize():
     for rss in rss_urls:
         feed = feedparser.parse(rss)
         
-        # Extracts the actual name of the publication from the RSS feed metadata
         source_name = feed.feed.get("title", "Industry Intelligence")
         
         for entry in feed.entries:
@@ -104,7 +104,6 @@ def gather_and_synthesize():
                 summary = entry.get("summary") or entry.get("description") or ""
                 pub_date = entry.get("published", "Recent")
                 
-                # Injects the explicit Source Name into the batch so Gemini can cite it accurately
                 master_text_batch += f"Source: {source_name}\nTitle: {entry.title}\nPublished: {pub_date}\nSummary: {summary}\n\n"
                 total_articles += 1
                 
@@ -119,6 +118,11 @@ def gather_and_synthesize():
     
     print("Transmitting identical batch to Gemini for War Game Generation...")
     wargame_report_md = wargame_engine.generate_wargame_scenario(master_text_batch)
+    
+    # --- THE NEW ERROR GATEKEEPER ---
+    if weekly_report_md == "CRITICAL_FAILURE" or wargame_report_md == "CRITICAL_FAILURE":
+        print("CRITICAL ERROR: Gemini API overloaded. Aborting save to protect database integrity.")
+        raise SystemExit("Pipeline aborted due to upstream AI generation failure.")
     
     os.makedirs("data", exist_ok=True)
     json_path = "data/intelligence.json"
