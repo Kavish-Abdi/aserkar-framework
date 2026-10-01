@@ -18,19 +18,23 @@ def get_base64_image(image_path):
     return None
 
 logo_base64 = get_base64_image("logo1.png")
-# If logo exists, format it as an inline HTML image tag
-logo_html = f'<img src="data:image/png;base64,{logo_base64}" style="height: 45px; vertical-align: middle; margin-right: 15px; padding-bottom: 4px;">' if logo_base64 else ''
 
-# --- HEADER SECTION ---
+# If the logo exists, create the HTML image tag. (Adjust 'height: 65px' if you want it larger/smaller)
+logo_html = f'<img src="data:image/png;base64,{logo_base64}" style="height: 65px; margin-right: 20px;">' if logo_base64 else ''
+
+# --- HEADER SECTION (FLEXBOX ALIGNMENT) ---
 st.markdown(
     f"""
-    <div style="text-align: center; margin-top: 0px; margin-bottom: 25px;">
-        <h1 style="margin-bottom: 4px; font-weight: 800; letter-spacing: 0.5px;">
-            {logo_html}The A.S.E.R.K.A.R. Framework
-        </h1>
-        <p style="color: #94A3B8; font-size: 15px; margin-top: 0px; font-weight: 400;">
-            ( Anticipatory Supply-chain Engine for Risk, Knowledge, and Automated Resilience )
-        </p>
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 25px;">
+        {logo_html}
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+            <h1 style="margin: 0; padding: 0; font-weight: 800; letter-spacing: 0.5px; line-height: 1.2;">
+                The A.S.E.R.K.A.R. Framework
+            </h1>
+            <p style="color: #94A3B8; font-size: 15px; margin: 0; padding: 0; font-weight: 400; padding-top: 5px;">
+                ( Anticipatory Supply-chain Engine for Risk, Knowledge, and Automated Resilience )
+            </p>
+        </div>
     </div>
     """,
     unsafe_allow_html=True
