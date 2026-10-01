@@ -48,7 +48,6 @@ def synthesize_with_retry(prompt, max_retries=5, initial_delay=10):
         except Exception as e:
             print(f"Attempt {attempt} failed with error: {str(e)}")
             if attempt == max_retries:
-                # Returns a strict ERROR flag instead of a string if it totally fails
                 return "CRITICAL_FAILURE"
             print(f"Retrying in {delay} seconds...")
             time.sleep(delay)
@@ -67,7 +66,16 @@ def synthesize_weekly_report(raw_batch_text):
     4. Labor & Economic Factors
     5. Public Health & Safety
     
-    CRITICAL CITATION RULE: To maintain absolute academic authenticity, EVERY SINGLE bullet point, factual statement, or analytical claim MUST end with an explicit source citation in parentheses at the very end of the line, detailing the publication and date based on the provided source (e.g., (FreightWaves, October 2026)).
+    CRITICAL CITATION RULE:
+    To maintain absolute academic authenticity, EVERY SINGLE bullet point, factual statement, or analytical claim MUST end with an explicit source citation in parentheses at the very end of the line.
+    The citation MUST strictly include:
+    1. The publication/source name
+    2. The exact article title in quotation marks
+    3. The publication date
+    
+    Required Citation Format:
+    ([Publication Name], "[Exact Article Title]", [Month Year])
+    Example: (FreightWaves, "Intermodal Container Rail Volume Breaks Daily Records", October 2026)
     
     Format the output cleanly using professional Markdown headings, bolding, and bullet points. If there is no news for a specific category, state "No significant disruptions reported this week."
     
@@ -96,15 +104,15 @@ def gather_and_synthesize():
     
     for rss in rss_urls:
         feed = feedparser.parse(rss)
-        
         source_name = feed.feed.get("title", "Industry Intelligence")
         
         for entry in feed.entries:
             if is_published_in_window(entry, days=8) and is_relevant_article(entry):
                 summary = entry.get("summary") or entry.get("description") or ""
                 pub_date = entry.get("published", "Recent")
+                clean_title = entry.title.replace('"', "'")
                 
-                master_text_batch += f"Source: {source_name}\nTitle: {entry.title}\nPublished: {pub_date}\nSummary: {summary}\n\n"
+                master_text_batch += f"Source: {source_name}\nArticle Title: \"{clean_title}\"\nPublished Date: {pub_date}\nSummary: {summary}\n\n"
                 total_articles += 1
                 
     print(f"Total relevant articles captured for this cycle: {total_articles}")
@@ -119,7 +127,6 @@ def gather_and_synthesize():
     print("Transmitting identical batch to Gemini for War Game Generation...")
     wargame_report_md = wargame_engine.generate_wargame_scenario(master_text_batch)
     
-    # --- THE NEW ERROR GATEKEEPER ---
     if weekly_report_md == "CRITICAL_FAILURE" or wargame_report_md == "CRITICAL_FAILURE":
         print("CRITICAL ERROR: Gemini API overloaded. Aborting save to protect database integrity.")
         raise SystemExit("Pipeline aborted due to upstream AI generation failure.")
