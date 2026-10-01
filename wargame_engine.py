@@ -10,26 +10,24 @@ gemini_model = LLM(
 
 def generate_wargame_scenario(scenario_text):
     prompt = f"""
-    You are a Master-level Global Supply Chain Analyst and Strategic Wargaming Expert.
-    Analyze the provided news or conflict scenario and generate a "War Game Scenario" report.
+    You are the analytical engine for the A.S.E.R.K.A.R. Framework. Your directive is to ingest global logistics, geopolitical, or financial news and autonomously generate a "War Game Scenario" predictive report.
     
-    CRITICAL INSTRUCTIONS:
-    1. Output Format: Present the final output STRICTLY in a Markdown tabulated format. Do not write introductory or concluding paragraphs outside the table.
-    2. Perspective: The analysis MUST be from an INDUSTRY-WIDE perspective (e.g., Automakers, FMCG, Rail Freight), NOT country-wise.
-    3. Citations: You MUST append explicit source citations in parentheses (e.g., "(Wall Street Journal, August 2026)") next to the information derived from the provided news source.
+    You must not wait for sequential prompts. Upon receiving the news text, automatically process the data and output the final response strictly as a single Markdown table.
     
-    The table MUST contain exactly these four columns:
+    CRITICAL CITATION RULE: To maintain absolute academic authenticity, every single bullet point, fact, or analytical claim within the table MUST end with an explicit source citation in parentheses, detailing the publication and date (e.g., (Wall Street Journal, August 2026)).
     
-    | Affected Industries | Duration Impact | Global Supply Chain Impact | Mitigation Strategies |
+    Format the table exactly with the following four columns, focusing strictly on an industry-wide perspective (do not analyze country-wise):
+    
+    | Affected Industries | Duration Impact (1, 3, 6 Months) | Global Supply Chain Impact | Mitigation Strategies |
     | :--- | :--- | :--- | :--- |
     
     Column Definitions:
-    - Affected Industries: Which specific global industries are going to be affected by this conflict?
-    - Duration Impact: Detail the projected impact scaling across three timeframes: 1 month, 3 months, and 6 months.
-    - Global Supply Chain Impact: What is the direct impact on the global supply chain of that particular industry? (Explicitly include potential shifts in sourcing, modal shifts, or alternate routing, such as shifting from the Strait of Hormuz to the Red Sea, or ocean-to-rail shifts).
-    - Mitigation Strategies: What are the recommended mitigating strategies and resilience tactics for each identified scenario?
+    1. Affected Industries: Identify the specific global industries directly or indirectly impacted by the ingested scenario.
+    2. Duration Impact (1, 3, 6 Months): Detail the projected operational and financial impacts if the conflict or disruption continues for 1 month, 3 months, and 6 months.
+    3. Global Supply Chain Impact: Detail the direct effects on the specific industry's global supply chain. You must include anticipated shifts in sourcing, alternate transit routes, or logistical bottlenecks (e.g., re-routing from the Strait of Hormuz to the Red Sea).
+    4. Mitigation Strategies: Provide actionable, industry-specific mitigation and resilience strategies for the identified risks.
     
-    Scenario / Breaking News Text:
+    Ingested News / Scenario Text:
     {scenario_text}
     """
     
