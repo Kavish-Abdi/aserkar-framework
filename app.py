@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import base64
 from datetime import datetime
 
 st.set_page_config(
@@ -9,19 +10,24 @@ st.set_page_config(
     page_icon="🔺"
 )
 
+# --- IMAGE ENCODER FOR INLINE HTML ---
+def get_base64_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    return None
+
+logo_base64 = get_base64_image("logo1.png")
+# If logo exists, format it as an inline HTML image tag
+logo_html = f'<img src="data:image/png;base64,{logo_base64}" style="height: 45px; vertical-align: middle; margin-right: 15px; padding-bottom: 4px;">' if logo_base64 else ''
+
 # --- HEADER SECTION ---
-header_col1, header_col2, header_col3 = st.columns([1.5, 1, 1.5])
-
-with header_col2:
-    if os.path.exists("logo1.png"):
-        st.image("logo1.png", use_container_width=True)
-    else:
-        st.warning("logo1.png not found. Please upload it to the repository.")
-
 st.markdown(
-    """
+    f"""
     <div style="text-align: center; margin-top: 0px; margin-bottom: 25px;">
-        <h1 style="margin-bottom: 4px; font-weight: 800; letter-spacing: 0.5px;">The A.S.E.R.K.A.R. Framework</h1>
+        <h1 style="margin-bottom: 4px; font-weight: 800; letter-spacing: 0.5px;">
+            {logo_html}The A.S.E.R.K.A.R. Framework
+        </h1>
         <p style="color: #94A3B8; font-size: 15px; margin-top: 0px; font-weight: 400;">
             ( Anticipatory Supply-chain Engine for Risk, Knowledge, and Automated Resilience )
         </p>
@@ -57,7 +63,6 @@ if os.path.exists(json_path):
             data = json.load(f)
             
         if data and isinstance(data, list):
-            # Group reports by their 2-month cycle
             cycles_dict = {}
             for report in data:
                 cycle = get_cycle_name(report.get("date_collected", ""))
@@ -67,7 +72,6 @@ if os.path.exists(json_path):
             
             available_cycles = list(cycles_dict.keys())
             
-            # Global Dropdown controls both tabs
             col1, col2 = st.columns([1, 3])
             with col1:
                 selected_cycle = st.selectbox("Select Analysis Cycle:", available_cycles)
@@ -94,7 +98,6 @@ if os.path.exists(json_path):
                 for report in cycles_dict[selected_cycle]:
                     st.caption(f"**Scenario Generated:** {report.get('date_collected')}")
                     with st.container(border=True):
-                        # Safely load the wargame scenario or display a fallback message if missing
                         wargame_data = report.get("wargame_scenario", "No War Game Scenario generated for this cycle yet.")
                         st.markdown(wargame_data)
                     st.write("")
