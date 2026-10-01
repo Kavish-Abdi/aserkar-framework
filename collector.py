@@ -26,7 +26,7 @@ def synthesize_with_retry(prompt, max_retries=3, initial_delay=5):
                 return f"Error generating synthesis after {max_retries} retries: {str(e)}"
             print(f"Retrying in {delay} seconds...")
             time.sleep(delay)
-            delay *= 2  # Exponential backoff
+            delay *= 2
 
 def synthesize_weekly_report(raw_batch_text):
     prompt = f"""
@@ -71,16 +71,27 @@ def gather_and_synthesize():
     os.makedirs("data", exist_ok=True)
     json_path = "data/intelligence.json"
     
-    # Save the structured master weekly report
-    report_data = [{
+    existing_data = []
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r") as f:
+                existing_data = json.load(f)
+        except json.JSONDecodeError:
+            pass
+    
+    # Create the new report object
+    new_report = {
         "date_collected": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "master_report": weekly_report_md
-    }]
+    }
+    
+    # Append the new report to the top of the list so the newest is always first
+    existing_data.insert(0, new_report)
             
     with open(json_path, "w") as f:
-        json.dump(report_data, f, indent=4)
+        json.dump(existing_data, f, indent=4)
         
-    print("Weekly Master Synthesis saved successfully.")
+    print("Weekly Master Synthesis archived successfully.")
 
 if __name__ == "__main__":
     gather_and_synthesize()
