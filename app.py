@@ -11,7 +11,6 @@ st.set_page_config(
     page_icon="🔺"
 )
 
-# --- IMAGE ENCODER FOR INLINE HTML ---
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -21,7 +20,6 @@ def get_base64_image(image_path):
 logo_base64 = get_base64_image("logo1.png")
 logo_html = f'<img src="data:image/png;base64,{logo_base64}" style="height: 65px; margin-right: 20px;">' if logo_base64 else ''
 
-# --- HEADER SECTION (FLEXBOX ALIGNMENT) ---
 st.markdown(
     f"""
     <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 25px;">
@@ -79,23 +77,22 @@ if os.path.exists(json_path):
             st.write(f"### Intelligence for {selected_cycle}")
             st.write("")
             
-            # --- TAB NAVIGATION ---
             tab_archive, tab_wargame, tab_settings = st.tabs([
                 "🌐 Disruption Archive", 
                 "⚔️ War Game Simulator", 
                 "⚙️ Feed & Filter Settings"
             ])
             
-            # --- TAB 1: ARCHIVE ---
             with tab_archive:
                 st.markdown("#### Macro-level intelligence tracking critical disruption vectors.")
                 for report in cycles_dict[selected_cycle]:
                     st.caption(f"**Synthesis Generated:** {report.get('date_collected')} | **Articles Analyzed:** {report.get('articles_analyzed', 'N/A')}")
                     with st.container(border=True):
-                        st.markdown(report.get("master_report", "Report empty."))
+                        # Replaces $ with USD to prevent Streamlit from triggering LaTeX math formatting
+                        safe_report = report.get("master_report", "Report empty.").replace("$", "USD ")
+                        st.markdown(safe_report)
                     st.write("") 
             
-            # --- TAB 2: WAR GAME SIMULATOR ---
             with tab_wargame:
                 st.markdown("#### Strategic Impact Forecasting & Scenario Analysis")
                 for report in cycles_dict[selected_cycle]:
@@ -103,15 +100,15 @@ if os.path.exists(json_path):
                     with st.container(border=True):
                         wargame_data = report.get("wargame_scenario", "No War Game Scenario generated for this cycle yet.")
                         
-                        # Backwards compatibility check for older string-based reports
                         if isinstance(wargame_data, str):
-                            st.markdown(wargame_data)
+                            st.markdown(wargame_data.replace("$", "USD "))
                         elif isinstance(wargame_data, dict):
                             if "error" in wargame_data:
                                 st.error(wargame_data["error"])
                             else:
                                 st.markdown("### 📋 Executive Scenario Table")
-                                st.markdown(wargame_data.get("table", ""))
+                                safe_table = wargame_data.get("table", "").replace("$", "USD ")
+                                st.markdown(safe_table)
                                 
                                 col_visual1, col_visual2 = st.columns([1, 1])
                                 with col_visual1:
@@ -139,7 +136,6 @@ if os.path.exists(json_path):
                                 st.markdown(wargame_data.get("references", ""))
                     st.write("")
                     
-            # --- TAB 3: SETTINGS (ADMIN) ---
             with tab_settings:
                 st.markdown("#### Dynamic Source & Keyword Management")
                 st.caption("Add or modify RSS feeds and filtration keywords dynamically for Professor Aserkar. Changes take effect on the next collection cycle.")
