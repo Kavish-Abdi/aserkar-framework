@@ -1,8 +1,7 @@
 import os
-import time
+import json
 from crewai import LLM
 
-# Configured with the active Google production endpoint
 gemini_model = LLM(
     model="gemini/gemini-3.6-flash",
     api_key=os.environ.get("GEMINI_API_KEY")
@@ -10,40 +9,32 @@ gemini_model = LLM(
 
 def generate_wargame_scenario(scenario_text):
     prompt = f"""
-    You are the analytical engine for the A.S.E.R.K.A.R. Framework. Your directive is to ingest global logistics, geopolitical, or financial news and autonomously generate a "War Game Scenario" predictive report.
+    You are the analytical engine for the A.S.E.R.K.A.R. Framework. 
+    Your directive is to ingest global logistics news and autonomously generate a "War Game Scenario" predictive report.
     
-    You must not wait for sequential prompts. Upon receiving the news text, automatically process the data and output the final response strictly as a single Markdown table.
+    CRITICAL OUTPUT FORMAT:
+    You must output STRICTLY a valid JSON object. Do not include any markdown wrappers (like ```json), conversational text, or introductions. Just the raw JSON string.
     
-    CRITICAL CITATION RULE:
-    To maintain absolute academic authenticity, EVERY SINGLE bullet point, factual statement, or analytical claim within the table MUST end with an explicit source citation in parentheses at the very end of the line.
-    The citation MUST strictly include:
-    1. The publication/source name
-    2. The exact article title in quotation marks
-    3. The publication date
+    The JSON object MUST have exactly these four keys:
+    1. "table": A markdown string of the 4-column War Game table. Do NOT put citations inline.
+       Columns: | Affected Industries | Duration Impact (1, 3, 6 Months) | Global Supply Chain Impact | Mitigation Strategies |
+    2. "references": A markdown string containing a numbered list of all sources used, acting as a Bibliography at the end of the report. (Format: 1. Publication Name, "Article Title", Date).
+    3. "mermaid": A valid Mermaid.js flowchart string (starting with 'graph TD' or 'flowchart TD') visualizing the primary supply chain disruption and alternate mitigation routing.
+    4. "coordinates": A list of JSON objects containing "lat" and "lon" float values representing the geographic locations of the primary disruptions (e.g., ports, straits, rail hubs).
     
-    Required Citation Format:
-    ([Publication Name], "[Exact Article Title]", [Month Year])
-    Example: (The Loadstar, "Red Sea Diversions Squeeze Global Container Capacity", September 2026)
-    
-    Do not leave any line uncited.
-    
-    Format the table exactly with the following four columns, focusing strictly on an industry-wide perspective (do not analyze country-wise):
-    
-    | Affected Industries | Duration Impact (1, 3, 6 Months) | Global Supply Chain Impact | Mitigation Strategies |
-    | :--- | :--- | :--- | :--- |
-    
-    Column Definitions:
-    1. Affected Industries: Identify the specific global industries directly or indirectly impacted by the ingested scenario.
-    2. Duration Impact (1, 3, 6 Months): Detail the projected operational and financial impacts if the conflict or disruption continues for 1 month, 3 months, and 6 months.
-    3. Global Supply Chain Impact: Detail the direct effects on the specific industry's global supply chain. You must include anticipated shifts in sourcing, alternate transit routes, or logistical bottlenecks (e.g., re-routing from the Strait of Hormuz to the Red Sea).
-    4. Mitigation Strategies: Provide actionable, industry-specific mitigation and resilience strategies for the identified risks.
-    
-    Ingested News / Scenario Text:
+    Ingested News:
     {scenario_text}
     """
     
     try:
         response = gemini_model.call([{"role": "user", "content": prompt}])
-        return response
+        
+        # Strip potential markdown formatting from the API response
+        if response.startswith("```json"):
+            response = response.replace("```json", "", 1)
+        if response.endswith("```"):
+            response = response[:-3]
+            
+        return json.loads(response.strip())
     except Exception as e:
-        return f"Error generating War Game Scenario: {str(e)}"
+        return {"error": f"Error generating War Game Scenario: {str(e)}"}
