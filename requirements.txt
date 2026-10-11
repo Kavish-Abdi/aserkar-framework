@@ -1,5 +1,6 @@
-streamlit
+streamlit>=1.39.0
 crewai[google-genai]
 feedparser
 beautifulsoup4
 requests
+pandas
