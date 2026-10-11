@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from crewai import LLM
 
 gemini_model = LLM(
@@ -7,7 +8,7 @@ gemini_model = LLM(
     api_key=os.environ.get("GEMINI_API_KEY")
 )
 
-def generate_wargame_scenario(scenario_text):
+def generate_wargame_scenario(scenario_text, max_retries=15, initial_delay=20):
     prompt = f"""
     You are the analytical engine for the A.S.E.R.K.A.R. Framework. 
     Your directive is to ingest global logistics news and autonomously generate a "War Game Scenario" predictive report.
@@ -26,15 +27,27 @@ def generate_wargame_scenario(scenario_text):
     {scenario_text}
     """
     
-    try:
-        response = gemini_model.call([{"role": "user", "content": prompt}])
-        
-        # Strip potential markdown formatting from the API response
-        if response.startswith("```json"):
-            response = response.replace("```json", "", 1)
-        if response.endswith("```"):
-            response = response[:-3]
+    delay = initial_delay
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"War Game Engine: Attempt {attempt} of {max_retries}...")
+            response = gemini_model.call([{"role": "user", "content": prompt}])
             
-        return json.loads(response.strip())
-    except Exception as e:
-        return {"error": f"Error generating War Game Scenario: {str(e)}"}
+            if "503" in str(response):
+                raise Exception("503 UNAVAILABLE - Server Overloaded")
+            
+            # Strip potential markdown formatting from the API response
+            if response.startswith("```json"):
+                response = response.replace("```json", "", 1)
+            if response.endswith("```"):
+                response = response[:-3]
+                
+            return json.loads(response.strip())
+            
+        except Exception as e:
+            print(f"War Game Engine Attempt {attempt} failed: {str(e)}")
+            if attempt == max_retries:
+                return {"error": f"Error generating War Game Scenario after {max_retries} retries: {str(e)}"}
+            time.sleep(delay)
+            # Capping delay at 120 seconds max
+            delay = min(delay * 2, 120)
