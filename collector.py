@@ -64,21 +64,23 @@ def is_relevant_article(entry):
     content_block = f"{entry.title} {entry.get('summary', '')}".lower()
     return any(keyword in content_block for keyword in target_keywords)
 
-def synthesize_with_retry(prompt, max_retries=5, initial_delay=10):
+def synthesize_with_retry(prompt, max_retries=15, initial_delay=20):
     delay = initial_delay
     for attempt in range(1, max_retries + 1):
         try:
+            print(f"Master Synthesis: Attempt {attempt} of {max_retries}...")
             response = gemini_model.call([{"role": "user", "content": prompt}])
             if response and "Error generating synthesis" not in str(response) and "503" not in str(response):
                 return response
             raise Exception(str(response))
         except Exception as e:
-            print(f"Attempt {attempt} failed with error: {str(e)}")
+            print(f"Attempt {attempt} failed: {str(e)}")
             if attempt == max_retries:
                 return "CRITICAL_FAILURE"
-            print(f"Retrying in {delay} seconds...")
+            print(f"API busy. Waiting {delay} seconds before retrying...")
             time.sleep(delay)
-            delay *= 2
+            # Capping delay at 120 seconds max so it keeps hammering predictably
+            delay = min(delay * 2, 120)
 
 def synthesize_weekly_report(raw_batch_text):
     prompt = f"""
@@ -142,9 +144,8 @@ def gather_and_synthesize():
     print("Transmitting identical batch to Gemini for War Game Generation...")
     wargame_report_data = wargame_engine.generate_wargame_scenario(master_text_batch)
     
-    # Exits cleanly with Code 0 to prevent GitHub failure alerts
     if weekly_report_md == "CRITICAL_FAILURE" or "error" in wargame_report_data:
-        print("API overloaded. Safely aborting to protect database integrity without triggering GitHub failure.")
+        print("API overloaded entirely. Safely aborting to protect database integrity without triggering GitHub failure.")
         sys.exit(0)
     
     os.makedirs("data", exist_ok=True)
